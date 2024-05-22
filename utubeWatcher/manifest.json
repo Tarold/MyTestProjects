@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Video Playing Checker",
+  "version": "1.0",
+  "description": "Check if a video is playing and show the current state in a popup",
+  "permissions": ["activeTab", "scripting"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}
