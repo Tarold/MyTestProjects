@@ -3,7 +3,7 @@
   "name": "WebSocket Spacebar Trigger with Session Management",
   "version": "1.1",
   "description": "Sends a WebSocket message when the spacebar is pressed if the funnelId matches.",
-  "permissions": ["activeTab", "https://atlantic-boatneck-cloak.glitch.me/*"],
+  "permissions": ["activeTab"],
   "background": {
     "scripts": ["background.js"],
     "persistent": false
