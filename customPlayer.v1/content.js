@@ -1,73 +1,76 @@
-function controlVideoElements(doc, action) {
+window.addEventListener('load', () => {
+  const videos = document.querySelectorAll('video');
+  console.log('wideos', videos);
+});
+
+function controlVideoElements(doc, action, tabID) {
   const videos = doc.querySelectorAll('video');
   console.log(`Found videos:`, videos);
 
   videos.forEach((video) => {
     try {
-      video[action]();
-      console.log(
-        `${action.charAt(0).toUpperCase() + action.slice(1)}ed video:`,
-        video
-      );
+      if (action === 'connect') {
+        video.addEventListener('play', () => {
+          chrome.runtime.sendMessage({
+            action: 'play-videos',
+          });
+        });
+        video.addEventListener('pause', () => {
+          chrome.runtime.sendMessage({
+            action: 'pause-videos',
+          });
+        });
+      } else video[action]();
     } catch (err) {
       console.error(`Failed to ${action} video:`, err);
     }
   });
 }
 
-function scanAndControlVideos(action) {
-  // Control videos in the main document
-  controlVideoElements(document, action);
-
-  // Use a MutationObserver to watch for dynamically added videos
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeName === 'VIDEO') {
-          try {
-            node[action]();
-            console.log(
-              `${
-                action.charAt(0).toUpperCase() + action.slice(1)
-              }ed newly added video:`,
-              node
-            );
-          } catch (err) {
-            console.error(`Failed to ${action} newly added video:`, err);
-          }
-        }
-        if (node.querySelectorAll) {
-          const nestedVideos = node.querySelectorAll('video');
-          nestedVideos.forEach((video) => {
-            try {
-              video[action]();
-              console.log(
-                `${
-                  action.charAt(0).toUpperCase() + action.slice(1)
-                }ed nested video:`,
-                video
-              );
-            } catch (err) {
-              console.error(`Failed to ${action} nested video:`, err);
-            }
-          });
-        }
-      });
-    });
-  });
-
-  observer.observe(document.body, { childList: true, subtree: true });
-}
-
-// Listen for messages from the popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message) => {
   const actions = {
-    'pause-videos': 'pause',
+    'connect-videos': 'connect',
     'play-videos': 'play',
+    'pause-videos': 'pause',
   };
 
   if (actions[message.action]) {
-    // Add some delay to allow dynamic content to load
-    setTimeout(() => scanAndControlVideos(actions[message.action]), 10);
+    setTimeout(
+      () =>
+        controlVideoElements(document, actions[message.action], message.tabID),
+      10
+    );
   }
 });
+
+// video.addEventListener('ended', () => {
+//   console.log('Playback ended');
+// });
+
+// video.addEventListener('timeupdate', () => {
+//   console.log('Current time:', video.currentTime);
+// });
+
+// video.addEventListener('volumechange', () => {
+//   console.log('Volume changed:', video.volume);
+// });
+
+// video.addEventListener('seeking', () => {
+//   console.log('Seeking started');
+// });
+
+// video.addEventListener('seeked', () => {
+//   console.log('Seeking ended');
+// });
+
+// video.addEventListener('loadedmetadata', () => {
+//   console.log('Metadata loaded');
+// });
+
+// video.addEventListener('canplay', () => {
+//   console.log('Can start playing');
+// });
+// console.log(
+//   `${action.charAt(0).toUpperCase() + action.slice(1)}ed video:`,
+//   video
+// );

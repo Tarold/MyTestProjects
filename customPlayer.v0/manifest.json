@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "CustomPlayer",
-  "version": "2.0",
-  "description": "Combines video pause functionality with WebSocket spacebar trigger and session management.",
+  "name": "Video Custom Player Extension",
+  "version": "1.0",
+  "description": "Pause videos on any website.",
   "permissions": ["activeTab", "scripting", "tabs"],
   "background": {
     "service_worker": "background.js"
@@ -13,7 +13,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js", "contentScript.js"],
+      "js": ["content.js"],
       "all_frames": true
     }
   ]

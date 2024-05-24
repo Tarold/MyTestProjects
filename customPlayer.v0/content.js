@@ -62,8 +62,8 @@ function scanAndControlVideos(action) {
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const actions = {
-    'play-videos': 'play',
     'pause-videos': 'pause',
+    'play-videos': 'play',
   };
 
   if (actions[message.action]) {
