@@ -1,30 +1,31 @@
-window.addEventListener('load', () => {
-  const videos = document.querySelectorAll('video');
-  console.log('wideos', videos);
-});
-
-function controlVideoElements(doc, action, tabID) {
+function controlVideoElements(doc, action) {
   const videos = doc.querySelectorAll('video');
-  console.log(`Found videos:`, videos);
 
   videos.forEach((video) => {
     try {
-      if (action === 'connect') {
-        video.addEventListener('play', () => {
-          chrome.runtime.sendMessage({
-            action: 'play-videos',
+      switch (action) {
+        case 'connect':
+          video.addEventListener('play', () => {
+            chrome.runtime.sendMessage({
+              action: 'play-videos',
+            });
           });
-        });
-        video.addEventListener('pause', () => {
-          chrome.runtime.sendMessage({
-            action: 'pause-videos',
+          video.addEventListener('pause', () => {
+            chrome.runtime.sendMessage({
+              action: 'pause-videos',
+            });
           });
-        });
-      } else video[action]();
+          break;
+        default:
+          video[action]();
+          break;
+      }
     } catch (err) {
       console.error(`Failed to ${action} video:`, err);
     }
   });
+
+  console.log('Videos connected: ' + videos.length);
 }
 
 chrome.runtime.onMessage.addListener((message) => {
@@ -34,12 +35,9 @@ chrome.runtime.onMessage.addListener((message) => {
     'pause-videos': 'pause',
   };
 
-  if (actions[message.action]) {
-    setTimeout(
-      () =>
-        controlVideoElements(document, actions[message.action], message.tabID),
-      10
-    );
+  const action = actions[message.action];
+  if (action) {
+    setTimeout(() => controlVideoElements(document, action), 10);
   }
 });
 

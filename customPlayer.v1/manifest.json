@@ -5,7 +5,7 @@
   "description": "Combines video pause functionality with WebSocket spacebar trigger and session management.",
   "permissions": ["activeTab", "scripting", "tabs"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "service_worker.js"
   },
   "action": {
     "default_popup": "popup.html"
