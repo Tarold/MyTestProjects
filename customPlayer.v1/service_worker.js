@@ -28,6 +28,7 @@ function openSocket() {
         if (tabs.length > 0) {
           chrome.tabs.sendMessage(tabs[0].id, {
             action: message.action,
+            currentTime: message.currentTime,
           });
         }
       });
@@ -60,6 +61,7 @@ chrome.runtime.onMessage.addListener(function (request) {
     if (request.action === 'play-videos' || request.action === 'pause-videos') {
       const message = {
         action: request.action,
+        currentTime: request.currentTime,
         funnelId: funnelId,
       };
       socket.send(JSON.stringify(message));

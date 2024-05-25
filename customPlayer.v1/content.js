@@ -1,4 +1,4 @@
-function controlVideoElements(doc, action) {
+function controlVideoElements(doc, action, currentTime) {
   const videos = doc.querySelectorAll('video');
 
   videos.forEach((video) => {
@@ -8,6 +8,7 @@ function controlVideoElements(doc, action) {
           video.addEventListener('play', () => {
             chrome.runtime.sendMessage({
               action: 'play-videos',
+              currentTime: video.currentTime,
             });
           });
           video.addEventListener('pause', () => {
@@ -15,17 +16,28 @@ function controlVideoElements(doc, action) {
               action: 'pause-videos',
             });
           });
+
+          chrome.runtime.sendMessage({
+            action: 'connection-success',
+          });
           break;
         default:
+          if (currentTime) {
+            video.currentTime = currentTime;
+          }
+
           video[action]();
           break;
       }
     } catch (err) {
       console.error(`Failed to ${action} video:`, err);
+      chrome.runtime.sendMessage({
+        action: 'connection-error',
+      });
     }
   });
 
-  console.log('Videos connected: ' + videos.length);
+  if (videos.length) console.log('Videos connected: ' + videos.length);
 }
 
 chrome.runtime.onMessage.addListener((message) => {
@@ -36,8 +48,9 @@ chrome.runtime.onMessage.addListener((message) => {
   };
 
   const action = actions[message.action];
+  const currentTime = actions[message.currentTime];
   if (action) {
-    setTimeout(() => controlVideoElements(document, action), 10);
+    setTimeout(() => controlVideoElements(document, action, currentTime), 10);
   }
 });
 
