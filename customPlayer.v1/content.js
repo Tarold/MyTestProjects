@@ -46,9 +46,9 @@ chrome.runtime.onMessage.addListener((message) => {
     'play-videos': 'play',
     'pause-videos': 'pause',
   };
-
   const action = actions[message.action];
-  const currentTime = actions[message.currentTime];
+  const currentTime = message.currentTime;
+
   if (action) {
     setTimeout(() => controlVideoElements(document, action, currentTime), 10);
   }

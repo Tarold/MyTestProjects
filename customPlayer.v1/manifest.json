@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "CustomPlayer",
-  "version": "1.1",
-  "description": "Combines video pause functionality with WebSocket spacebar trigger and session management.",
+  "name": "SyncPlayer",
+  "version": "1.2",
+  "description": "Synchronize your video player with connected video players.",
   "permissions": ["activeTab", "scripting", "tabs"],
   "background": {
     "service_worker": "service_worker.js"

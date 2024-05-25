@@ -64,6 +64,7 @@ chrome.runtime.onMessage.addListener(function (request) {
         currentTime: request.currentTime,
         funnelId: funnelId,
       };
+
       socket.send(JSON.stringify(message));
     }
   }
