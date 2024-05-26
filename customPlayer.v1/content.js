@@ -1,3 +1,27 @@
+function saveConnection(videos) {
+  chrome.storage.local.get('savedTabId', (result) => {
+    const savedTabId = result.savedTabId;
+
+    if (savedTabId) {
+      chrome.storage.local.set(
+        {
+          connectedTab: { isHaveVideo: !!videos.length, tabId: savedTabId },
+        },
+        function () {
+          if (chrome.runtime.lastError) {
+            console.error(
+              'Error saving to chrome.storage.local:',
+              chrome.runtime.lastError
+            );
+          }
+        }
+      );
+    } else {
+      console.log('No saved tab ID found');
+    }
+  });
+}
+
 function controlVideoElements(doc, action, currentTime) {
   const videos = doc.querySelectorAll('video');
 
@@ -16,6 +40,8 @@ function controlVideoElements(doc, action, currentTime) {
               action: 'pause-videos',
             });
           });
+
+          saveConnection(videos);
 
           chrome.runtime.sendMessage({
             action: 'connection-success',

@@ -24,12 +24,22 @@ function openSocket() {
     console.log('Received:', message);
 
     if (message.action && message.funnelId !== funnelId) {
-      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-        if (tabs.length > 0) {
-          chrome.tabs.sendMessage(tabs[0].id, {
-            action: message.action,
-            currentTime: message.currentTime,
+      chrome.storage.local.get('savedTabId', (result) => {
+        const savedTabId = result.savedTabId;
+
+        if (savedTabId) {
+          chrome.tabs.get(savedTabId, (tab) => {
+            if (chrome.runtime.lastError) {
+              console.error('Error querying tab:', chrome.runtime.lastError);
+            } else {
+              chrome.tabs.sendMessage(tab.id, {
+                action: message.action,
+                currentTime: message.currentTime,
+              });
+            }
           });
+        } else {
+          console.log('No saved tab ID found');
         }
       });
     }
