@@ -2,6 +2,15 @@ let socket;
 let funnelId = generateFunnelId();
 let knownFunnelIds = new Set();
 
+if (!socket)
+  chrome.storage.local.set({ webSocketStatus: 'closed' }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('Error saving webSocketStatus:', chrome.runtime.lastError);
+    } else {
+      console.log('webSocketStatus saved:', 'closed');
+    }
+  });
+
 function generateFunnelId() {
   return '_' + Math.random().toString(36).substr(2, 9);
 }
@@ -11,6 +20,16 @@ function openSocket() {
 
   function handleOnOpen() {
     console.log('WebSocket is connected. FunnelId:', funnelId);
+    chrome.storage.local.set({ webSocketStatus: 'succed' }, () => {
+      if (chrome.runtime.lastError) {
+        console.error(
+          'Error saving webSocketStatus:',
+          chrome.runtime.lastError
+        );
+      } else {
+        console.log('webSocketStatus saved:', 'succed');
+      }
+    });
     socket.send(
       JSON.stringify({
         action: 'register',
@@ -47,11 +66,31 @@ function openSocket() {
 
   function handleOnClose() {
     console.log('WebSocket is closed.');
-    setTimeout(openSocket, 1000);
+    chrome.storage.local.set({ webSocketStatus: 'closed' }, () => {
+      if (chrome.runtime.lastError) {
+        console.error(
+          'Error saving webSocketStatus:',
+          chrome.runtime.lastError
+        );
+      } else {
+        console.log('webSocketStatus saved:', 'closed');
+      }
+    });
+    socket.close();
   }
 
   function handleOnError() {
     console.error('WebSocket Error:', error);
+    chrome.storage.local.set({ webSocketStatus: 'error' }, () => {
+      if (chrome.runtime.lastError) {
+        console.error(
+          'Error saving webSocketStatus:',
+          chrome.runtime.lastError
+        );
+      } else {
+        console.log('webSocketStatus saved:', 'error');
+      }
+    });
     socket.close();
   }
 
@@ -64,8 +103,6 @@ function openSocket() {
   socket.onerror = handleOnError;
 }
 
-openSocket();
-
 chrome.runtime.onMessage.addListener(function (request) {
   if (socket && socket.readyState === WebSocket.OPEN) {
     if (request.action === 'play-videos' || request.action === 'pause-videos') {
@@ -77,6 +114,8 @@ chrome.runtime.onMessage.addListener(function (request) {
 
       socket.send(JSON.stringify(message));
     }
+  } else if (request.action === 'connection-success') {
+    openSocket();
   }
 });
 
