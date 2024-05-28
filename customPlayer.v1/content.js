@@ -22,13 +22,13 @@ function saveConnection(videos) {
   });
 }
 
-function controlVideoElements(doc, action, currentTime) {
+function controlVideoElements(doc, action, currentTime, isMine) {
   const videos = doc.querySelectorAll('video');
 
   videos.forEach((video) => {
     try {
       switch (action) {
-        case 'connect':
+        case 'connect-videos':
           video.addEventListener('play', () => {
             chrome.runtime.sendMessage({
               action: 'play-videos',
@@ -38,6 +38,7 @@ function controlVideoElements(doc, action, currentTime) {
           video.addEventListener('pause', () => {
             chrome.runtime.sendMessage({
               action: 'pause-videos',
+              currentTime: video.currentTime,
             });
           });
 
@@ -47,12 +48,21 @@ function controlVideoElements(doc, action, currentTime) {
             action: 'connection-success',
           });
           break;
-        default:
+        case 'play-videos-now':
+        case 'pause-videos-now':
+          if (isMine) break;
           if (currentTime) {
             video.currentTime = currentTime;
           }
 
-          video[action]();
+          const actions = {
+            'play-videos-now': 'play',
+            'pause-videos-now': 'pause',
+          };
+
+          video[actions[action]]();
+          break;
+        default:
           break;
       }
     } catch (err) {
@@ -67,16 +77,15 @@ function controlVideoElements(doc, action, currentTime) {
 }
 
 chrome.runtime.onMessage.addListener((message) => {
-  const actions = {
-    'connect-videos': 'connect',
-    'play-videos': 'play',
-    'pause-videos': 'pause',
-  };
-  const action = actions[message.action];
+  const action = message.action;
   const currentTime = message.currentTime;
+  const isMine = message.isMine;
 
   if (action) {
-    setTimeout(() => controlVideoElements(document, action, currentTime), 10);
+    setTimeout(
+      () => controlVideoElements(document, action, currentTime, isMine),
+      10
+    );
   }
 });
 

@@ -3,11 +3,11 @@ let funnelId = generateFunnelId();
 let knownFunnelIds = new Set();
 
 if (!socket)
-  chrome.storage.local.set({ webSocketStatus: 'closed' }, () => {
+  chrome.storage.local.set({ webSocketStatus: 'init' }, () => {
     if (chrome.runtime.lastError) {
       console.error('Error saving webSocketStatus:', chrome.runtime.lastError);
     } else {
-      console.log('webSocketStatus saved:', 'closed');
+      console.log('webSocket init');
     }
   });
 
@@ -42,7 +42,7 @@ function openSocket() {
     const message = JSON.parse(event.data);
     console.log('Received:', message);
 
-    if (message.action && message.funnelId !== funnelId) {
+    if (message.action) {
       chrome.storage.local.get('savedTabId', (result) => {
         const savedTabId = result.savedTabId;
 
@@ -51,10 +51,21 @@ function openSocket() {
             if (chrome.runtime.lastError) {
               console.error('Error querying tab:', chrome.runtime.lastError);
             } else {
-              chrome.tabs.sendMessage(tab.id, {
-                action: message.action,
-                currentTime: message.currentTime,
-              });
+              const isMine = message.funnelId === funnelId;
+              if (
+                message.action === 'play-videos' ||
+                message.action === 'pause-videos'
+              )
+                chrome.tabs.sendMessage(tab.id, {
+                  action: message.action + '-now',
+                  currentTime: message.currentTime,
+                  isMine,
+                });
+              else
+                chrome.tabs.sendMessage(tab.id, {
+                  action: message.action,
+                  isMine,
+                });
             }
           });
         } else {
