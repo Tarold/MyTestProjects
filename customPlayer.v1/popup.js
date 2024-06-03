@@ -55,17 +55,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   updateStatusText('dom loaded');
   connectVideosButton.addEventListener('click', () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, ([{ id }]) => {
-      chrome.tabs.sendMessage(id, {
-        action: 'connect-videos',
-      });
-      chrome.storage.local.set({ savedTabId: id }, () => {
-        if (chrome.runtime.lastError) {
-          console.error('Error saving tab ID:', chrome.runtime.lastError);
-        } else {
-          console.log('Tab ID saved:', id);
-        }
-      });
-    });
+    chrome.tabs.query(
+      { active: true, currentWindow: true },
+      ([{ id, url }]) => {
+        chrome.tabs.sendMessage(id, {
+          action: 'connect-videos',
+        });
+        chrome.storage.local.set(
+          {
+            savedTabId: id,
+            savedUrl: url,
+          },
+          () => {
+            if (chrome.runtime.lastError) {
+              console.error('Error saving tab ID:', chrome.runtime.lastError);
+            } else {
+              console.log('Tab ID saved:', id);
+            }
+          }
+        );
+      }
+    );
   });
 });

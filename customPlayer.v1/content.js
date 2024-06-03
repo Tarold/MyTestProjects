@@ -22,26 +22,123 @@ function saveConnection(videos) {
   });
 }
 
-function controlVideoElements(doc, action, currentTime, isMine) {
+function localSet(message) {
+  chrome.storage.local.get('savedTabId', ({ savedTabId }) => {
+    if (savedTabId) {
+      chrome.storage.local.set(
+        {
+          message,
+        },
+        function () {
+          if (chrome.runtime.lastError) {
+            console.error(
+              'Error saving to chrome.storage.local:',
+              chrome.runtime.lastError
+            );
+          }
+        }
+      );
+    } else {
+      console.log('No saved tab ID found');
+    }
+  });
+}
+
+function syncVideo(video, serverStatus) {
+  chrome.storage.local.get('status', (result) => {
+    const status = serverStatus ? serverStatus : result.status;
+    if (!status) return;
+
+    if (status.playerStatus !== 'INIT') {
+      if (status.playerStatus === 'PLAYING') {
+        startTime = new Date(status.actionTime);
+        nowTime = new Date();
+        const differenceInSeconds = Math.floor((nowTime - startTime) / 1000);
+        if (differenceInSeconds < 0) return;
+        video.currentTime = status.second + differenceInSeconds;
+        video.play();
+      }
+      if (status.playerStatus === 'PAUSE' && status.second) {
+        video.currentTime = status.second;
+        video.pause();
+      }
+    } else {
+      console.log('No saved tab ID found');
+    }
+  });
+}
+
+function controlVideoElements(doc, { action, currentTime, status }) {
   const videos = doc.querySelectorAll('video');
 
   videos.forEach((video) => {
     try {
       switch (action) {
         case 'connect-videos':
-          video.addEventListener('play', () => {
-            chrome.runtime.sendMessage({
-              action: 'play-videos',
-              currentTime: video.currentTime,
+          if (!video.dataset.playEventListenerAdded) {
+            video.addEventListener('play', () => {
+              chrome.storage.local.get('currentAction', ({ currentAction }) => {
+                if (!currentAction.endsWith('-now')) {
+                  const status = {
+                    playerStatus: 'PLAYING',
+                    second: video.currentTime,
+                    actionTime: new Date().getTime(),
+                  };
+                  chrome.runtime.sendMessage({
+                    action: 'play-videos',
+                    currentTime: video.currentTime,
+                    actionTime: new Date().getTime(),
+                    status,
+                  });
+                  chrome.storage.local.set(
+                    {
+                      currentAction: '',
+                      status,
+                    },
+                    function () {
+                      if (chrome.runtime.lastError) {
+                        console.error(
+                          'Error saving to chrome.storage.local:',
+                          chrome.runtime.lastError
+                        );
+                      }
+                    }
+                  );
+                }
+              });
             });
-          });
-          video.addEventListener('pause', () => {
-            chrome.runtime.sendMessage({
-              action: 'pause-videos',
-              currentTime: video.currentTime,
+            video.addEventListener('pause', () => {
+              chrome.storage.local.get('currentAction', ({ currentAction }) => {
+                if (!currentAction.endsWith('-now')) {
+                  chrome.runtime.sendMessage({
+                    action: 'pause-videos',
+                    currentTime: video.currentTime,
+                  });
+                  chrome.storage.local.set(
+                    {
+                      currentAction: '',
+                      status: {
+                        playerStatus: 'PAUSE',
+                        second: video.currentTime,
+                        actionTime: new Date().getTime(),
+                      },
+                    },
+                    function () {
+                      if (chrome.runtime.lastError) {
+                        console.error(
+                          'Error saving to chrome.storage.local:',
+                          chrome.runtime.lastError
+                        );
+                      }
+                    }
+                  );
+                }
+              });
             });
-          });
+            video.dataset.playEventListenerAdded = 'true';
+          }
 
+          syncVideo(video);
           saveConnection(videos);
 
           chrome.runtime.sendMessage({
@@ -50,7 +147,6 @@ function controlVideoElements(doc, action, currentTime, isMine) {
           break;
         case 'play-videos-now':
         case 'pause-videos-now':
-          if (isMine) break;
           if (currentTime) {
             video.currentTime = currentTime;
           }
@@ -61,6 +157,22 @@ function controlVideoElements(doc, action, currentTime, isMine) {
           };
 
           video[actions[action]]();
+          break;
+        case 'sync-now':
+          if (status) {
+            syncVideo(video, status);
+            chrome.storage.local.set(
+              { status, currentAction: '' },
+              function () {
+                if (chrome.runtime.lastError) {
+                  console.error(
+                    'Error saving to chrome.storage.local:',
+                    chrome.runtime.lastError
+                  );
+                }
+              }
+            );
+          }
           break;
         default:
           break;
@@ -77,15 +189,8 @@ function controlVideoElements(doc, action, currentTime, isMine) {
 }
 
 chrome.runtime.onMessage.addListener((message) => {
-  const action = message.action;
-  const currentTime = message.currentTime;
-  const isMine = message.isMine;
-
-  if (action) {
-    setTimeout(
-      () => controlVideoElements(document, action, currentTime, isMine),
-      10
-    );
+  if (message && message.action) {
+    setTimeout(() => controlVideoElements(document, message), 10);
   }
 });
 
