@@ -51,8 +51,8 @@ function syncVideo(video, serverStatus) {
 
     if (status.playerStatus !== 'INIT') {
       if (status.playerStatus === 'PLAYING') {
-        startTime = new Date(status.actionTime);
-        nowTime = new Date();
+        startTime = new Date(status.actionTime).getTime();
+        nowTime = new Date(new Date.toISOString()).getTime();
         const differenceInSeconds = Math.floor((nowTime - startTime) / 1000);
         if (differenceInSeconds < 0) return;
         video.currentTime = status.second + differenceInSeconds;
@@ -82,12 +82,12 @@ function controlVideoElements(doc, { action, currentTime, status }) {
                   const status = {
                     playerStatus: 'PLAYING',
                     second: video.currentTime,
-                    actionTime: new Date().getTime(),
+                    actionTime: new Date.toISOString(),
                   };
                   chrome.runtime.sendMessage({
                     action: 'play-videos',
                     currentTime: video.currentTime,
-                    actionTime: new Date().getTime(),
+                    actionTime: new Date.toISOString(),
                     status,
                   });
                   chrome.storage.local.set(
@@ -120,7 +120,7 @@ function controlVideoElements(doc, { action, currentTime, status }) {
                       status: {
                         playerStatus: 'PAUSE',
                         second: video.currentTime,
-                        actionTime: new Date().getTime(),
+                        actionTime: new Date.toISOString(),
                       },
                     },
                     function () {
