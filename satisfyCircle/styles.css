@@ -1,0 +1,69 @@
+.container {
+  height: 150px;
+  width: 150px;
+  position: relative;
+  display: flex;
+}
+
+.dot {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+video {
+  position: absolute;
+  width: 100%;
+}
+
+.dot::before {
+  content: '';
+  display: block;
+  padding: auto 0;
+  height: 15px;
+  width: 15px;
+  background-color: red;
+  border-radius: 100%;
+  animation-duration: 4s;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  animation-timing-function: ease-in-out;
+  animation-name: slidein;
+}
+
+#w0::before {
+  animation-delay: 0s;
+}
+#w1::before {
+  animation-delay: 0.5s;
+}
+#w2::before {
+  animation-delay: 1s;
+}
+#w3::before {
+  animation-delay: 1.5s;
+}
+#w4::before {
+  animation-delay: 2s;
+}
+#w5::before {
+  animation-delay: 2.5s;
+}
+#w6::before {
+  animation-delay: 3s;
+}
+#w7::before {
+  animation-delay: 3.5s;
+}
+
+@keyframes slidein {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(133px); /* Adjust as needed */
+  }
+}
