@@ -151,7 +151,7 @@ function openSocket() {
 
   socket.onerror = handleOnError;
 }
-
+openSocket();
 chrome.runtime.onMessage.addListener(function (request) {
   if (socket && socket.readyState === WebSocket.OPEN) {
     if (request.action === 'play-videos' || request.action === 'pause-videos') {
