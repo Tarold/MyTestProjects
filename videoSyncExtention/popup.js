@@ -7,10 +7,11 @@ const setState = (state) => {
     }
   });
 };
-const getState = (state) => chrome.storage.local.get(state);
+const getState = (state, callback) => chrome.storage.local.get(state, callback);
 
 const updateStatusText = () => {
-  getState(['connectedTab', 'webSocketStatus']).then(
+  getState(
+    ['connectedTab', 'webSocketStatus'],
     ({ connectedTab, webSocketStatus }) => {
       const statusText = document.getElementById('status-text');
       const serverStatusText = document.getElementById('server-status-text');
@@ -62,6 +63,7 @@ chrome.storage.onChanged.addListener(function () {
 });
 document.addEventListener('DOMContentLoaded', () => {
   const connectVideosButton = document.getElementById('connect-button');
+  const w1Button = document.getElementById('set-stop-button');
 
   updateStatusText('dom loaded');
   connectVideosButton.addEventListener('click', () => {
@@ -72,10 +74,25 @@ document.addEventListener('DOMContentLoaded', () => {
           action: 'connect-videos',
         });
         setState({
+          currentAction: '',
           savedTabId: id,
           savedUrl: url,
         });
       }
     );
+  });
+
+  w1Button.addEventListener('click', () => {
+    chrome.runtime.sendMessage({
+      action: 'pause-videos',
+      currentTime: '23.404',
+    });
+    chrome.storage.local.set({
+      currentAction: '',
+      status: {
+        playerStatus: 'PAUSE',
+        second: '23.404',
+      },
+    });
   });
 });
