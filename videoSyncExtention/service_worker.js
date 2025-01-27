@@ -1,3 +1,16 @@
+//TODO list
+//not working if not refresh page
+//double play then u iniciate play video
+// play-stop video not used
+//Video player status popup not used
+//wind video not implemented
+//some video players not start video if not start play it manualy
+
+//aditional todo
+//add more info about status
+//go to page if someone watch it
+//change watch speed?
+
 // utils
 const setState = (state) => {
   chrome.storage.local.set(state, () => {
