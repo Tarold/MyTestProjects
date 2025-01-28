@@ -1,6 +1,5 @@
 //TODO list
 //not working if not refresh page
-//double play then u iniciate play video
 //Video player status popup not used
 //wind video not implemented
 //some video players not start video if not start play it manualy
@@ -35,16 +34,15 @@ const generateRandomId = (length) => {
 //program
 
 const userId = generateRandomId(10);
+setState({ myId: userId });
 
 let socket;
 
 if (!socket) setState({ webSocketStatus: 'init' });
 
 function setAction(message, tabId) {
-  message.action += '-now';
-
   chrome.tabs.sendMessage(tabId, message);
-  setState({ currentAction: message.action });
+  setState({ currentAction: message.action, initiatorId: message.initiatorId });
 }
 
 function setStatusToServer(socket) {
@@ -90,28 +88,35 @@ function openSocket() {
     if (message.action) {
       chrome.storage.local.get(({ savedTabId }) => {
         if (!savedTabId) return console.log('No saved tab ID found');
-        console.log('first');
         if (chrome.runtime.lastError)
           return console.error('Error querying tab:', chrome.runtime.lastError);
-        console.log('second');
 
         if (message.action === 'sync') {
           setAction(
             {
               action: message.action,
               status: message.status,
+              initiatorId: message.userId,
             },
             savedTabId
           );
         } else if (message.action === 'register-succed') {
           if (message.playerStatus !== 'INIT') {
-            setAction({ ...message, action: 'sync' }, savedTabId);
+            setAction(
+              {
+                action: 'sync',
+                status: message.status,
+                initiatorId: message.userId,
+              },
+              savedTabId
+            );
           } else {
             setStatusToServer(socket);
           }
         } else
           chrome.tabs.sendMessage(savedTabId, {
             action: message.action,
+            initiatorId: message.userId,
           });
       });
     }

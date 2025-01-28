@@ -67,31 +67,36 @@ function controlVideoElements(doc, { action, currentTime, status }) {
         case 'connect-videos':
           if (!video.dataset.playEventListenerAdded) {
             video.addEventListener('play', () => {
-              chrome.storage.local.get('currentAction', ({ currentAction }) => {
-                if (
-                  currentAction === 'sync-now' ||
-                  !currentAction.endsWith('-now')
-                ) {
-                  const status = {
-                    playerStatus: 'PLAYING',
-                    second: video.currentTime,
-                  };
+              chrome.storage.local.get(
+                ({ currentAction, initiatorId, myId }) => {
+                  if (currentAction !== 'sync' && initiatorId !== myId) {
+                    const status = {
+                      playerStatus: 'PLAYING',
+                      second: video.currentTime,
+                    };
 
-                  chrome.runtime.sendMessage({
-                    action: 'play-videos',
-                    currentTime: video.currentTime,
-                    status,
-                  });
-                  setState({
-                    currentAction: '',
-                    status,
-                  });
+                    chrome.runtime.sendMessage({
+                      action: 'play-videos',
+                      currentTime: video.currentTime,
+                      status,
+                    });
+                    setState({
+                      currentAction: '',
+                      initiatorId: '',
+                      status,
+                    });
+                  } else {
+                    setState({
+                      currentAction: '',
+                      initiatorId: '',
+                    });
+                  }
                 }
-              });
+              );
             });
             video.addEventListener('pause', () => {
-              chrome.storage.local.get('currentAction', ({ currentAction }) => {
-                if (!currentAction.endsWith('-now')) {
+              chrome.storage.local.get(({ myId, currentAction }) => {
+                if (currentAction !== 'sync' && myId !== message.initiatorId) {
                   chrome.runtime.sendMessage({
                     action: 'pause-videos',
                     currentTime: video.currentTime,
@@ -99,10 +104,16 @@ function controlVideoElements(doc, { action, currentTime, status }) {
 
                   setState({
                     currentAction: '',
+                    initiatorId: '',
                     status: {
                       playerStatus: 'PAUSE',
                       second: video.currentTime,
                     },
+                  });
+                } else {
+                  setState({
+                    currentAction: '',
+                    initiatorId: '',
                   });
                 }
               });
@@ -110,7 +121,7 @@ function controlVideoElements(doc, { action, currentTime, status }) {
             video.addEventListener('waiting', () => {
               chrome.storage.local.get('currentAction', ({ currentAction }) => {
                 statusDiv.textContent = statusDiv.textContent + 'waiting\n';
-                if (!currentAction.endsWith('-now')) {
+                if (currentAction !== 'sync') {
                   chrome.runtime.sendMessage({
                     action: 'loading-pause-videos',
                     currentTime: video.currentTime,
@@ -124,8 +135,6 @@ function controlVideoElements(doc, { action, currentTime, status }) {
                       isLoading: true,
                     },
                   });
-                } else {
-                  setState({ currentAction: '' });
                 }
               });
             });
@@ -145,6 +154,7 @@ function controlVideoElements(doc, { action, currentTime, status }) {
                   });
                   setState({
                     currentAction: '',
+                    initiatorId: '',
                     status,
                   });
                 }
@@ -160,7 +170,7 @@ function controlVideoElements(doc, { action, currentTime, status }) {
             action: 'connection-success',
           });
           break;
-        case 'sync-now':
+        case 'sync':
           if (status) {
             syncVideo(video, status);
             setState({ status });
@@ -179,7 +189,8 @@ function controlVideoElements(doc, { action, currentTime, status }) {
 }
 
 chrome.runtime.onMessage.addListener((message) => {
-  if (message && message.action) {
-    setTimeout(() => controlVideoElements(document, message), 10);
-  }
+  if (!message) return;
+  statusDiv.textContent = JSON.stringify(message);
+
+  setTimeout(() => controlVideoElements(document, message), 10);
 });
