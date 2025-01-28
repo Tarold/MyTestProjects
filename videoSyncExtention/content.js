@@ -40,7 +40,6 @@ function syncVideo(video, serverStatus) {
   getState('status', (result) => {
     const status = serverStatus ? serverStatus : result.status;
     if (!status) return;
-    statusDiv.textContent = JSON.stringify(status);
     if (status.playerStatus === 'INIT') {
       console.log('No saved tab ID found');
     } else if (status.playerStatus === 'PLAYING' && status.second) {
@@ -69,7 +68,10 @@ function controlVideoElements(doc, { action, currentTime, status }) {
           if (!video.dataset.playEventListenerAdded) {
             video.addEventListener('play', () => {
               chrome.storage.local.get('currentAction', ({ currentAction }) => {
-                if (!currentAction.endsWith('-now')) {
+                if (
+                  currentAction === 'sync-now' ||
+                  !currentAction.endsWith('-now')
+                ) {
                   const status = {
                     playerStatus: 'PLAYING',
                     second: video.currentTime,
@@ -80,20 +82,10 @@ function controlVideoElements(doc, { action, currentTime, status }) {
                     currentTime: video.currentTime,
                     status,
                   });
-                  chrome.storage.local.set(
-                    {
-                      currentAction: '',
-                      status,
-                    },
-                    function () {
-                      if (chrome.runtime.lastError) {
-                        console.error(
-                          'Error saving to chrome.storage.local:',
-                          chrome.runtime.lastError
-                        );
-                      }
-                    }
-                  );
+                  setState({
+                    currentAction: '',
+                    status,
+                  });
                 }
               });
             });
@@ -105,23 +97,56 @@ function controlVideoElements(doc, { action, currentTime, status }) {
                     currentTime: video.currentTime,
                   });
 
-                  chrome.storage.local.set(
-                    {
-                      currentAction: '',
-                      status: {
-                        playerStatus: 'PAUSE',
-                        second: video.currentTime,
-                      },
+                  setState({
+                    currentAction: '',
+                    status: {
+                      playerStatus: 'PAUSE',
+                      second: video.currentTime,
                     },
-                    function () {
-                      if (chrome.runtime.lastError) {
-                        console.error(
-                          'Error saving to chrome.storage.local:',
-                          chrome.runtime.lastError
-                        );
-                      }
-                    }
-                  );
+                  });
+                }
+              });
+            });
+            video.addEventListener('waiting', () => {
+              chrome.storage.local.get('currentAction', ({ currentAction }) => {
+                statusDiv.textContent = statusDiv.textContent + 'waiting\n';
+                if (!currentAction.endsWith('-now')) {
+                  chrome.runtime.sendMessage({
+                    action: 'loading-pause-videos',
+                    currentTime: video.currentTime,
+                  });
+
+                  setState({
+                    currentAction: 'loading-pause-videos',
+                    status: {
+                      playerStatus: 'PAUSE',
+                      second: video.currentTime,
+                      isLoading: true,
+                    },
+                  });
+                } else {
+                  setState({ currentAction: '' });
+                }
+              });
+            });
+            video.addEventListener('playing', () => {
+              chrome.storage.local.get('currentAction', ({ currentAction }) => {
+                statusDiv.textContent = statusDiv.textContent + 'playing\n';
+                if (currentAction === 'loading-pause-videos') {
+                  const status = {
+                    playerStatus: 'PLAYING',
+                    second: video.currentTime,
+                  };
+
+                  chrome.runtime.sendMessage({
+                    action: 'play-videos',
+                    currentTime: video.currentTime,
+                    status,
+                  });
+                  setState({
+                    currentAction: '',
+                    status,
+                  });
                 }
               });
             });
@@ -135,33 +160,10 @@ function controlVideoElements(doc, { action, currentTime, status }) {
             action: 'connection-success',
           });
           break;
-        case 'play-videos-now':
-        case 'pause-videos-now':
-          if (currentTime) {
-            video.currentTime = currentTime;
-          }
-
-          const actions = {
-            'play-videos-now': 'play',
-            'pause-videos-now': 'pause',
-          };
-
-          video[actions[action]]();
-          break;
         case 'sync-now':
           if (status) {
             syncVideo(video, status);
-            chrome.storage.local.set(
-              { status, currentAction: '' },
-              function () {
-                if (chrome.runtime.lastError) {
-                  console.error(
-                    'Error saving to chrome.storage.local:',
-                    chrome.runtime.lastError
-                  );
-                }
-              }
-            );
+            setState({ status });
           }
           break;
         default:
@@ -174,45 +176,10 @@ function controlVideoElements(doc, { action, currentTime, status }) {
       });
     }
   });
-
-  if (videos.length) console.log('Videos connected: ' + videos.length);
 }
 
 chrome.runtime.onMessage.addListener((message) => {
-  statusDiv.textContent = JSON.stringify(message);
   if (message && message.action) {
     setTimeout(() => controlVideoElements(document, message), 10);
   }
 });
-
-// video.addEventListener('ended', () => {
-//   console.log('Playback ended');
-// });
-
-// video.addEventListener('timeupdate', () => {
-//   console.log('Current time:', video.currentTime);
-// });
-
-// video.addEventListener('volumechange', () => {
-//   console.log('Volume changed:', video.volume);
-// });
-
-// video.addEventListener('seeking', () => {
-//   console.log('Seeking started');
-// });
-
-// video.addEventListener('seeked', () => {
-//   console.log('Seeking ended');
-// });
-
-// video.addEventListener('loadedmetadata', () => {
-//   console.log('Metadata loaded');
-// });
-
-// video.addEventListener('canplay', () => {
-//   console.log('Can start playing');
-// });
-// console.log(
-//   `${action.charAt(0).toUpperCase() + action.slice(1)}ed video:`,
-//   video
-// );

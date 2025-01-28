@@ -1,15 +1,16 @@
 //TODO list
 //not working if not refresh page
 //double play then u iniciate play video
-// play-stop video not used
 //Video player status popup not used
 //wind video not implemented
 //some video players not start video if not start play it manualy
+//not to wind to fragment of another page
 
 //aditional todo
 //add more info about status
 //go to page if someone watch it
 //change watch speed?
+//if server slepping, wait them to start and reconect
 
 // utils
 const setState = (state) => {
@@ -41,10 +42,9 @@ if (!socket) setState({ webSocketStatus: 'init' });
 
 function setAction(message, tabId) {
   message.action += '-now';
-  const { action } = message;
 
   chrome.tabs.sendMessage(tabId, message);
-  setState({ currentAction: action });
+  setState({ currentAction: message.action });
 }
 
 function setStatusToServer(socket) {
@@ -138,7 +138,11 @@ function openSocket() {
 
 chrome.runtime.onMessage.addListener(function (request) {
   if (socket && socket.readyState === WebSocket.OPEN) {
-    if (request.action === 'play-videos' || request.action === 'pause-videos') {
+    if (
+      ['play-videos', 'pause-videos', 'loading-pause-videos'].includes(
+        request.action
+      )
+    ) {
       chrome.storage.local.get('status', ({ status }) => {
         if (status) {
           const message = {

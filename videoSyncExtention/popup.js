@@ -63,7 +63,6 @@ chrome.storage.onChanged.addListener(function () {
 });
 document.addEventListener('DOMContentLoaded', () => {
   const connectVideosButton = document.getElementById('connect-button');
-  const w1Button = document.getElementById('set-stop-button');
 
   updateStatusText('dom loaded');
   connectVideosButton.addEventListener('click', () => {
@@ -80,19 +79,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
     );
-  });
-
-  w1Button.addEventListener('click', () => {
-    chrome.runtime.sendMessage({
-      action: 'pause-videos',
-      currentTime: '23.404',
-    });
-    chrome.storage.local.set({
-      currentAction: '',
-      status: {
-        playerStatus: 'PAUSE',
-        second: '23.404',
-      },
-    });
   });
 });
