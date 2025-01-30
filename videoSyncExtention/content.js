@@ -52,7 +52,9 @@ function syncVideo(video, serverStatus) {
   });
 }
 
-function controlVideoElements(doc, { action, currentTime, status }) {
+const showLog = true;
+
+function controlVideoElements(doc, { action, status }) {
   const videos = doc.querySelectorAll('video');
 
   if (videos[0]) {
@@ -66,29 +68,33 @@ function controlVideoElements(doc, { action, currentTime, status }) {
       switch (action) {
         case 'connect-videos':
           if (!video.dataset.playEventListenerAdded) {
+            video.addEventListener('timeupdate', () => {
+              // if (lastTime === undefined) lastTime = video.currentTime;
+              // const deltaTime = lastTime - video.currentTime;
+              // if (timeLine.length > 10) timeLine.shift();
+              // timeLine.push(deltaTime);
+              // lastTime = video.currentTime;
+            });
             video.addEventListener('play', () => {
               chrome.storage.local.get(
                 ({ currentAction, initiatorId, myId }) => {
+                  if (showLog)
+                    statusDiv.textContent = statusDiv.textContent + 'play\n';
                   if (currentAction !== 'sync' && initiatorId !== myId) {
-                    const status = {
+                    const masterStatus = {
                       playerStatus: 'PLAYING',
                       second: video.currentTime,
                     };
 
+                    setState({
+                      currentAction: '',
+                      initiatorId: '',
+                      status: masterStatus,
+                    });
+
                     chrome.runtime.sendMessage({
                       action: 'play-videos',
-                      currentTime: video.currentTime,
-                      status,
-                    });
-                    setState({
-                      currentAction: '',
-                      initiatorId: '',
-                      status,
-                    });
-                  } else {
-                    setState({
-                      currentAction: '',
-                      initiatorId: '',
+                      status: masterStatus,
                     });
                   }
                 }
@@ -96,69 +102,99 @@ function controlVideoElements(doc, { action, currentTime, status }) {
             });
             video.addEventListener('pause', () => {
               chrome.storage.local.get(({ myId, currentAction }) => {
+                if (showLog)
+                  statusDiv.textContent = statusDiv.textContent + 'pause\n';
                 if (currentAction !== 'sync' && myId !== message.initiatorId) {
-                  chrome.runtime.sendMessage({
-                    action: 'pause-videos',
-                    currentTime: video.currentTime,
-                  });
+                  const masterStatus = {
+                    playerStatus: 'PAUSE',
+                    second: video.currentTime,
+                  };
 
                   setState({
                     currentAction: '',
                     initiatorId: '',
-                    status: {
-                      playerStatus: 'PAUSE',
-                      second: video.currentTime,
-                    },
+                    status: masterStatus,
                   });
-                } else {
-                  setState({
-                    currentAction: '',
-                    initiatorId: '',
+
+                  chrome.runtime.sendMessage({
+                    action: 'pause-videos',
+                    status: masterStatus,
                   });
                 }
               });
             });
             video.addEventListener('waiting', () => {
-              chrome.storage.local.get('currentAction', ({ currentAction }) => {
+              if (showLog)
                 statusDiv.textContent = statusDiv.textContent + 'waiting\n';
+
+              chrome.storage.local.get(({ currentAction }) => {
+                if (showLog)
+                  statusDiv.textContent = statusDiv.textContent + 'waiting';
                 if (currentAction !== 'sync') {
-                  chrome.runtime.sendMessage({
-                    action: 'loading-pause-videos',
-                    currentTime: video.currentTime,
-                  });
+                  const masterStatus = {
+                    playerStatus: 'PAUSE',
+                    second: video.currentTime,
+                    isLoading: true,
+                  };
 
                   setState({
                     currentAction: 'loading-pause-videos',
-                    status: {
-                      playerStatus: 'PAUSE',
-                      second: video.currentTime,
-                      isLoading: true,
-                    },
+                    status: masterStatus,
+                  });
+
+                  chrome.runtime.sendMessage({
+                    action: 'loading-pause-videos',
+                    status: masterStatus,
                   });
                 }
               });
             });
             video.addEventListener('playing', () => {
-              chrome.storage.local.get('currentAction', ({ currentAction }) => {
+              if (showLog)
                 statusDiv.textContent = statusDiv.textContent + 'playing\n';
+
+              chrome.storage.local.get('currentAction', ({ currentAction }) => {
                 if (currentAction === 'loading-pause-videos') {
-                  const status = {
+                  const masterStatus = {
                     playerStatus: 'PLAYING',
                     second: video.currentTime,
                   };
 
-                  chrome.runtime.sendMessage({
-                    action: 'play-videos',
-                    currentTime: video.currentTime,
-                    status,
-                  });
                   setState({
                     currentAction: '',
                     initiatorId: '',
-                    status,
+                    status: masterStatus,
+                  });
+
+                  chrome.runtime.sendMessage({
+                    action: 'play-videos',
+                    status: masterStatus,
                   });
                 }
               });
+              setState({
+                currentAction: '',
+                initiatorId: '',
+                isRewind: false,
+              });
+            });
+            video.addEventListener('seeking', () => {
+              if (showLog)
+                statusDiv.textContent = statusDiv.textContent + 'seeking\n';
+              // const masterStatus = {
+              //   playerStatus: 'PAUSE',
+              //   second: video.currentTime,
+              // };
+              // setState({
+              //   currentAction: '',
+              //   initiatorId: '',
+              //   status: masterStatus,
+              // });
+
+              // chrome.runtime.sendMessage({
+              //   action: 'rewind-videos',
+              //   status: masterStatus,
+              // });
             });
             video.dataset.playEventListenerAdded = 'true';
           }
@@ -190,7 +226,6 @@ function controlVideoElements(doc, { action, currentTime, status }) {
 
 chrome.runtime.onMessage.addListener((message) => {
   if (!message) return;
-  statusDiv.textContent = JSON.stringify(message);
 
   setTimeout(() => controlVideoElements(document, message), 10);
 });
