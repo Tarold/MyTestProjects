@@ -1,7 +1,6 @@
 //TODO list
 //not working if not refresh page
 //Video player status popup not used
-//wind video not implemented
 //some video players not start video if not start play it manualy
 //not to wind to fragment of another page
 
@@ -150,12 +149,9 @@ function openSocket() {
 chrome.runtime.onMessage.addListener(function (request) {
   if (socket && socket.readyState === WebSocket.OPEN) {
     if (
-      [
-        'play-videos',
-        'pause-videos',
-        'loading-pause-videos',
-        'rewind-videos',
-      ].includes(request.action)
+      ['play-videos', 'pause-videos', 'loading-pause-videos'].includes(
+        request.action
+      )
     ) {
       const message = {
         action: 'set-status',
