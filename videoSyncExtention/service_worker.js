@@ -31,6 +31,10 @@ const generateRandomId = (length) => {
   return result;
 };
 
+const socketSend = (message) => {
+  setState({ lastSend: message });
+  socket.send(JSON.stringify(message));
+};
 //program
 
 const userId = generateRandomId(10);
@@ -53,7 +57,7 @@ function setStatusToServer(socket) {
         status,
         userId,
       };
-      socket.send(JSON.stringify(message));
+      socketSend(message);
     }
   });
 }
@@ -64,27 +68,29 @@ function openSocket() {
   function handleOnOpen() {
     setState({ webSocketStatus: 'succed' });
 
-    socket.send(
-      JSON.stringify({
-        action: 'register',
-        userId,
-      })
-    );
+    socketSend({
+      action: 'register',
+      userId,
+    });
 
     setInterval(() => {
       // add catch if send error to create new connection
-      socket.send(
-        JSON.stringify({
-          action: 'im-alive',
-          userId,
-        })
-      );
+      socketSend({ action: 'im-alive', userId });
     }, 30000);
   }
 
-  function handleOnMessage(event) {
+  async function handleOnMessage(event) {
     const message = JSON.parse(event.data);
-    console.log('handeMessage', message);
+
+    const { lastSend } = await chrome.storage.local.get('lastSend');
+    console.log(lastSend, message);
+    if (JSON.stringify(lastSend) === JSON.stringify(message)) {
+      //maybe filter here
+      //add check if server handle socket
+      console.log(message);
+      return;
+    }
+
     if (message.action) {
       chrome.storage.local.get(({ savedTabId }) => {
         if (!savedTabId) return console.log('No saved tab ID found');
@@ -144,20 +150,21 @@ function openSocket() {
 chrome.runtime.onMessage.addListener(function (request) {
   if (socket && socket.readyState === WebSocket.OPEN) {
     if (
-      ['play-videos', 'pause-videos', 'loading-pause-videos'].includes(
-        request.action
-      )
+      [
+        'play-videos',
+        'pause-videos',
+        'loading-pause-videos',
+        'rewind-videos',
+      ].includes(request.action)
     ) {
-      chrome.storage.local.get('status', ({ status }) => {
-        if (status) {
-          const message = {
-            action: 'set-status',
-            status,
-            userId,
-          };
-          socket.send(JSON.stringify(message));
-        }
-      });
+      const message = {
+        action: 'set-status',
+        status: request.status,
+        testParam: request.action,
+        userId,
+      };
+
+      socketSend(message);
     }
   } else if (request.action === 'connection-success') {
     openSocket();
